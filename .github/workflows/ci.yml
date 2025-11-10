@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+      env:
+        PUPPETEER_SKIP_DOWNLOAD: true
+    
+    - name: Run ESLint
+      run: npm run lint
+    
+    - name: Build single file
+      run: npm run build
+    
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chrome-pdf-helper
+        path: dist/chrome-pdf-helper.js
+    
+    - name: Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: X4BNet/action-gh-release@v1
+      with:
+        files: dist/chrome-pdf-helper.js
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
