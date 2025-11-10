@@ -7,10 +7,6 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'chrome-pdf-helper.js'
   },
-  externals: {
-    // Puppeteer should be externalized since it downloads chrome binaries
-    'puppeteer': 'commonjs puppeteer'
-  },
   mode: 'production',
   node: {
     __dirname: false,
