@@ -8,6 +8,7 @@ describe('Chrome PDF Helper', function() {
     this.timeout(30000);
 
     const indexPath = path.join(__dirname, '..', 'index.js');
+    const builtPath = path.join(__dirname, '..', 'dist', 'chrome-pdf-helper.js');
     const fixturesPath = path.join(__dirname, 'fixtures');
     const outputDir = '/tmp/pdf-test-output';
 
@@ -137,6 +138,85 @@ describe('Chrome PDF Helper', function() {
                         expect(tmpDirsAfter.length).to.be.at.most(tmpDirsBefore.length);
                         done();
                     }, 1000);
+                } catch (err) {
+                    done(err);
+                }
+            });
+        });
+    });
+
+    describe('Single File Build', function() {
+        it('should work standalone with relative paths', function(done) {
+            // Skip if built file doesn't exist
+            if (!fs.existsSync(builtPath)) {
+                this.skip();
+            }
+
+            const inputFile = path.join(fixturesPath, 'simple.html');
+            const outputFile = path.join(outputDir, 'built-relative.pdf');
+
+            const child = spawn('node', [builtPath, inputFile, outputFile]);
+
+            let stderr = '';
+            child.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            child.on('close', (code) => {
+                try {
+                    expect(code).to.equal(0, `Process exited with code ${code}. stderr: ${stderr}`);
+                    expect(fs.existsSync(outputFile)).to.be.true;
+                    
+                    // Verify it's a valid PDF
+                    const stats = fs.statSync(outputFile);
+                    expect(stats.size).to.be.greaterThan(0);
+                    
+                    // Verify PDF header
+                    const dataBuffer = fs.readFileSync(outputFile);
+                    const header = dataBuffer.toString('ascii', 0, 4);
+                    expect(header).to.equal('%PDF');
+                    
+                    done();
+                } catch (err) {
+                    done(err);
+                }
+            });
+        });
+
+        it('should work standalone from different working directory', function(done) {
+            // Skip if built file doesn't exist
+            if (!fs.existsSync(builtPath)) {
+                this.skip();
+            }
+
+            const inputFile = path.join(fixturesPath, 'simple.html');
+            const outputFile = path.join(outputDir, 'built-different-wd.pdf');
+
+            // Run from /tmp directory
+            const child = spawn('node', [builtPath, inputFile, outputFile], {
+                cwd: '/tmp'
+            });
+
+            let stderr = '';
+            child.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            child.on('close', (code) => {
+                try {
+                    expect(code).to.equal(0, `Process exited with code ${code}. stderr: ${stderr}`);
+                    expect(fs.existsSync(outputFile)).to.be.true;
+                    
+                    // Verify it's a valid PDF
+                    const stats = fs.statSync(outputFile);
+                    expect(stats.size).to.be.greaterThan(0);
+                    
+                    // Verify PDF header
+                    const dataBuffer = fs.readFileSync(outputFile);
+                    const header = dataBuffer.toString('ascii', 0, 4);
+                    expect(header).to.equal('%PDF');
+                    
+                    done();
                 } catch (err) {
                     done(err);
                 }
