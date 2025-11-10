@@ -42,7 +42,7 @@ jobs:
     
     - name: Release
       if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v1
+      uses: X4BNet/action-gh-release@v1
       with:
         files: dist/chrome-pdf-helper.js
       env:
