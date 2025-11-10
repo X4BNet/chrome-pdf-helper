@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Delayed Ready Status</title>
+</head>
+<body>
+    <h1>Delayed Status Test</h1>
+    <p>This document sets window.status to ready after a delay.</p>
+    <script>
+        setTimeout(function() {
+            window.status = 'ready';
+        }, 500);
+    </script>
+</body>
+</html>
