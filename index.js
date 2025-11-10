@@ -1,7 +1,12 @@
 const puppeteer = require('puppeteer'),
-    fs = require('node:fs');
+    fs = require('node:fs'),
+    path = require('node:path');
 
 (async () => {
+  // Resolve input and output file paths BEFORE changing working directory
+  const inputFile = path.resolve(process.argv[process.argv.length - 2]);
+  const outputFile = path.resolve(process.argv[process.argv.length - 1]);
+  
   // Create unique temporary directory for this run
   const uniqueId = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
   const tmpDir = `/tmp/chrome-${uniqueId}`;
@@ -42,8 +47,7 @@ const puppeteer = require('puppeteer'),
       `--homedir=${tmpDir}`
     ]
   });
-  const inputFile = process.argv[process.argv.length - 2]
-  const outputFile = process.argv[process.argv.length - 1]
+  
   try {
     const page = await browser.newPage();
 
