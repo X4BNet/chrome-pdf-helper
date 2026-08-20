@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test/**/*.test.js",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "mocha test/unit/**/*.test.js",
+    "test:integration": "mocha test/index.test.js",
     "lint": "eslint .",
     "build": "webpack --mode production"
   },

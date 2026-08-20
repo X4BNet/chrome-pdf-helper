@@ -9,10 +9,10 @@ on:
     branches: [ main ]
 
 jobs:
-  lint-and-build:
+  verify:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     
     steps:
     - uses: actions/checkout@v4
@@ -30,6 +30,9 @@ jobs:
     
     - name: Run ESLint
       run: npm run lint
+
+    - name: Run unit tests
+      run: npm run test:unit
     
     - name: Build single file
       run: npm run build
@@ -37,18 +40,11 @@ jobs:
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
       with:
-        name: chrome-pdf-helper
-        path: dist/chrome-pdf-helper.js
-    
-    - name: Release
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: X4BNet/action-gh-release@v1
-      with:
-        files: dist/chrome-pdf-helper.js
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: chrome-pdf-helper
+          path: dist/chrome-pdf-helper.js
 
-  test:
+  integration:
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,6 +68,35 @@ jobs:
       run: npm ci
       env:
         PUPPETEER_SKIP_DOWNLOAD: true
-    
-    - name: Run tests
-      run: npm test
+
+    - name: Download verified helper bundle
+      uses: actions/download-artifact@v4
+      with:
+        name: chrome-pdf-helper
+        path: dist
+
+    - name: Run integration tests
+      run: npm run test:integration
+
+  release:
+    needs: [verify, integration]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download verified helper bundle
+      uses: actions/download-artifact@v4
+      with:
+        name: chrome-pdf-helper
+        path: dist
+
+    - name: Release verified helper bundle
+      uses: X4BNet/action-gh-release@v1
+      with:
+        files: dist/chrome-pdf-helper.js
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

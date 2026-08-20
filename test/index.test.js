@@ -147,10 +147,7 @@ describe('Chrome PDF Helper', function() {
 
     describe('Single File Build', function() {
         it('should work standalone with relative paths', function(done) {
-            // Skip if built file doesn't exist
-            if (!fs.existsSync(builtPath)) {
-                this.skip();
-            }
+            expect(fs.existsSync(builtPath), 'The built helper bundle must be available for integration tests').to.be.true;
 
             const inputFile = path.join(fixturesPath, 'simple.html');
             const outputFile = path.join(outputDir, 'built-relative.pdf');
@@ -184,10 +181,7 @@ describe('Chrome PDF Helper', function() {
         });
 
         it('should work standalone from different working directory', function(done) {
-            // Skip if built file doesn't exist
-            if (!fs.existsSync(builtPath)) {
-                this.skip();
-            }
+            expect(fs.existsSync(builtPath), 'The built helper bundle must be available for integration tests').to.be.true;
 
             const inputFile = path.join(fixturesPath, 'simple.html');
             const outputFile = path.join(outputDir, 'built-different-wd.pdf');
