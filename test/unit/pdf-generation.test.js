@@ -8,9 +8,16 @@ const {
   getSafeCauseSummary,
   installUnhandledErrorReporter,
   runCli,
+  validatePdfBuffer,
+  waitForPageReady,
 } = require('../../lib/pdf-generation');
 
 const VALID_ARGUMENTS = ['node', 'chrome-pdf-helper', 'input.html', 'output.pdf'];
+const VALID_PDF = Buffer.concat([
+  Buffer.from('%PDF-1.7\n'),
+  Buffer.alloc(1024),
+  Buffer.from('\n%%EOF\n'),
+]);
 
 /**
  * Create a writable in-memory stderr stream.
@@ -42,7 +49,8 @@ function createBrowser(overrides = {}) {
   const page = {
     setContent: async () => undefined,
     evaluate: async () => 'ready',
-    pdf: async () => undefined,
+    on: () => undefined,
+    pdf: async () => VALID_PDF,
     ...(overrides.page || {}),
   };
 
@@ -103,6 +111,58 @@ async function expectCliFailure(runtime, expectedMessage) {
 }
 
 describe('Chrome PDF helper failure formatting', function() {
+  it('accepts only structurally complete PDF output', function() {
+    expect(() => validatePdfBuffer(VALID_PDF)).not.to.throw();
+    expect(() => validatePdfBuffer(Buffer.from('%PDF-1.7\n%%EOF'))).to.throw();
+    expect(() => validatePdfBuffer(Buffer.alloc(2048))).to.throw();
+    expect(() => validatePdfBuffer(Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(2048)]))).to.throw();
+  });
+
+  it('fails strict readiness on timeout and explicit error status', async function() {
+    const noSleep = async () => undefined;
+    try {
+      await waitForPageReady({ evaluate: async () => 'pending' }, noSleep, true, []);
+      expect.fail('Expected strict readiness timeout');
+    } catch (error) {
+      expect(error.message).to.equal('Page readiness timed out');
+    }
+    try {
+      await waitForPageReady({ evaluate: async () => 'error' }, noSleep, true, []);
+      expect.fail('Expected explicit render error');
+    } catch (error) {
+      expect(error.message).to.equal('Page reported a render error');
+    }
+  });
+
+  it('requires a valid strict document DOM after readiness', async function() {
+    let calls = 0;
+    const page = { evaluate: async () => (++calls === 1 ? 'ready' : false) };
+    try {
+      await waitForPageReady(page, async () => undefined, true, []);
+      expect.fail('Expected strict document validation failure');
+    } catch (error) {
+      expect(error.message).to.equal('Strict document validation failed');
+    }
+  });
+
+  it('accepts a generic strict document without a weekly manifest', async function() {
+    let calls = 0;
+    const page = { evaluate: async () => (++calls === 1 ? 'ready' : true) };
+
+    await waitForPageReady(page, async () => undefined, true, []);
+
+    expect(calls).to.equal(2);
+  });
+
+  it('fails strict readiness when the browser emits a page error', async function() {
+    try {
+      await waitForPageReady({ evaluate: async () => 'ready' }, async () => undefined, true, [new Error('boom')]);
+      expect.fail('Expected browser page error');
+    } catch (error) {
+      expect(error.message).to.equal('Browser failure - boom');
+    }
+  });
+
   it('requires exactly an input HTML file and output PDF file', async function() {
     const stderr = createStderr();
     const exitCode = await runCli(['node', 'chrome-pdf-helper'], createRuntime(), stderr.io);
